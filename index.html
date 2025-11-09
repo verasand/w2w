@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prototipo de App Geo-Cercas</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <!-- NUEVA LIBRERÍA: html2canvas para tomar "snapshots" -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" xintegrity="sha512-BNaRQnYJYiPSqHHDb58BHEqVRK
+    XySYNzQBUQQ/g2gnsKEzHQTACHcTXjUeMyPDqFqqmbclnyFIIgIijGidBFHIw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .leaflet-container { background: #eee; }
+        .shadow-top { box-shadow: 0 -4px 6px -1px rgb(0 0 0 / 0.1), 0 -2px 4px -2px rgb(0 0 0 / 0.1); }
+        #sideMenu { transition: transform 0.3s ease-in-out; }
+        .menu-open { transform: translateX(0) !important; }
+        .user-marker { filter: hue-rotate(170deg) saturate(1.5); }
+        
+        /* Estilos para el spinner de carga */
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid #fff;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <div class="max-w-md mx-auto h-screen flex flex-col bg-white overflow-hidden shadow-2xl">
+
+        <!-- 1. Encabezado de la App -->
+        <header class="flex justify-between items-center p-4 bg-white shadow-md z-20">
+            <button id="menuButton" class="p-2 rounded-full hover:bg-gray-100 focus:outline-none">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" /></svg>
+            </button>
+            <h1 class="text-xl font-bold text-gray-800">Geo-Cercas App</h1>
+            <div class="w-8"></div>
+        </header>
+
+        <!-- 2. Contenedor del Mapa -->
+        <main class="flex-grow relative">
+            <div id="map" class="absolute inset-0"></div>
+        </main>
+
+        <!-- 3. Panel de Acción (Footer) -->
+        <footer class="p-4 bg-white shadow-top z-10">
+            <div class="flex flex-col gap-3">
+                <div id="statusResult" class="hidden text-center p-3 rounded-lg">
+                    <p id="statusText" class="font-bold text-white text-lg"></p>
+                    <p id="distanceText" class="text-sm text-white opacity-90"></p>
+                </div>
+                
+                <button id="checkButton" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-200 flex items-center justify-center gap-2">
+                    <span id="checkButtonText">¿Puedo hacer la actividad X aquí?</span>
+                    <div id="checkSpinner" class="spinner hidden"></div>
+                </button>
+                
+                <!-- NUEVO BOTÓN DE EVIDENCIA (INICIALMENTE OCULTO) -->
+                <button id="snapshotButton" class="w-full bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition duration-200 hidden flex items-center justify-center gap-2">
+                    <span id="snapshotButtonText">Crear Evidencia</span>
+                    <div id="snapshotSpinner" class="spinner hidden"></div>
+                </button>
+            </div>
+        </footer>
+
+        <!-- 4. Menú Lateral (Oculto por defecto) -->
+        <div id="sideMenu" class="absolute inset-y-0 left-0 w-72 bg-white shadow-xl z-30 transform -translate-x-full">
+            <div class="flex flex-col h-full">
+                <div class="flex justify-between items-center p-4 border-b">
+                    <h2 class="text-lg font-semibold">Zonas Restringidas</h2>
+                    <button id="closeMenuButton" class="p-2 rounded-full hover:bg-gray-100 focus:outline-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <ul id="placesList" class="flex-grow overflow-y-auto p-2">
+                    <!-- Los lugares se insertarán aquí -->
+                </ul>
+            </div>
+        </div>
+        
+        <div id="menuOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-20 hidden"></div>
+
+        <!-- 5. NUEVO MODAL DE EVIDENCIA (INICIALMENTE OCULTO) -->
+        <div id="snapshotModal" class="fixed inset-0 bg-black bg-opacity-75 z-40 flex items-center justify-center p-4 hidden">
+            <div class="bg-white rounded-lg shadow-2xl max-w-sm w-full overflow-hidden">
+                <!-- Contenido de la evidencia (esto es lo que se descargará) -->
+                <div id="evidenceCard" class="bg-white">
+                    <div class="p-4 border-b">
+                        <h3 class="text-xl font-bold text-gray-900">Evidencia de Ubicación</h3>
+                    </div>
+                    <!-- Aquí irá la "foto" del mapa -->
+                    <div id="snapshotImageContainer" class="bg-gray-200">
+                        <img id="snapshotImage" src="" alt="Snapshot del Mapa" class="w-full h-auto" />
+                    </div>
+                    <!-- Aquí irá la información de texto -->
+                    <div id="snapshotInfo" class="p-4 text-sm text-gray-700 space-y-2">
+                        <!-- La información se inyectará aquí -->
+                    </div>
+                </div>
+                
+                <!-- Botones de Acción del Modal -->
+                <div class="p-4 bg-gray-50 border-t flex gap-3">
+                    <button id="downloadSnapshotButton" class="w-full bg-blue-600 text-white font-semibold py-2 px-3 rounded-lg hover:bg-blue-700 transition duration-150">Descargar</button>
+                    <button id="closeModalButton" class="w-full bg-gray-200 text-gray-700 font-semibold py-2 px-3 rounded-lg hover:bg-gray-300 transition duration-150">Cerrar</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- 1. CONFIGURACIÓN INICIAL ---
+            const initialCoords = [3.0084, -76.4839];
+            const restrictedAreas = [
+                { name: "Colegio Fernández", lat: 3.0050, lng: -76.4870, type: 'school', city: 'Santander de Quilichao' },
+                { name: "Sede Educativa Local", lat: 3.0095, lng: -76.4810, type: 'school', city: 'Santander de Quilichao' },
+                { name: "Hospital Local", lat: 3.0110, lng: -76.4820, type: 'hospital', city: 'Santander de Quilichao' },
+                { name: "Colegio Berchmans", lat: 3.4015, lng: -76.5413, type: 'school', city: 'Cali' }
+            ];
+
+            // --- Elementos del DOM ---
+            const mapElement = document.getElementById('map');
+            const checkButton = document.getElementById('checkButton');
+            const checkButtonText = document.getElementById('checkButtonText');
+            const checkSpinner = document.getElementById('checkSpinner');
+            const statusResult = document.getElementById('statusResult');
+            const statusText = document.getElementById('statusText');
+            const distanceText = document.getElementById('distanceText');
+            const menuButton = document.getElementById('menuButton');
+            const closeMenuButton = document.getElementById('closeMenuButton');
+            const sideMenu = document.getElementById('sideMenu');
+            const menuOverlay = document.getElementById('menuOverlay');
+            const placesList = document.getElementById('placesList');
+
+            // --- Nuevos elementos para Evidencia ---
+            const snapshotButton = document.getElementById('snapshotButton');
+            const snapshotButtonText = document.getElementById('snapshotButtonText');
+            const snapshotSpinner = document.getElementById('snapshotSpinner');
+            const snapshotModal = document.getElementById('snapshotModal');
+            const closeModalButton = document.getElementById('closeModalButton');
+            const downloadSnapshotButton = document.getElementById('downloadSnapshotButton');
+            const evidenceCard = document.getElementById('evidenceCard');
+            const snapshotImage = document.getElementById('snapshotImage');
+            const snapshotInfo = document.getElementById('snapshotInfo');
+
+            let userMarker = null;
+            let map = null;
+            let lastCheckData = null; // Variable para guardar los datos de la última revisión
+
+            // --- 2. LÓGICA DE PERÍMETRO DINÁMICO ---
+            function getPerimeter(type, city) {
+                if (type === 'school') {
+                    if (city === 'Cali') return 200;
+                    if (city === 'Santander de Quilichao') return 80;
+                }
+                return 150; // Default
+            }
+
+            // --- 3. INICIALIZACIÓN DEL MAPA ---
+            function initMap() {
+                try {
+                    map = L.map(mapElement).setView(initialCoords, 15);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                        // Opciones para html2canvas (permitir uso cross-origin de tiles)
+                        crossOrigin: 'anonymous'
+                    }).addTo(map);
+                    populateRestrictedAreas();
+                } catch (e) {
+                    console.error("Error al inicializar el mapa:", e);
+                    mapElement.innerHTML = "<div class='p-4 text-center text-red-500'>Error al cargar el mapa.</div>";
+                }
+            }
+            
+            // --- 4. DIBUJAR ZONAS Y POBLAR MENÚ ---
+            function populateRestrictedAreas() {
+                if (!map) return;
+                placesList.innerHTML = ''; 
+                restrictedAreas.forEach(area => {
+                    const radius = getPerimeter(area.type, area.city);
+                    L.circle([area.lat, area.lng], {
+                        color: 'red', fillColor: '#f03', fillOpacity: 0.3, radius: radius
+                    }).addTo(map);
+                    L.marker([area.lat, area.lng])
+                        .addTo(map)
+                        .bindPopup(`<b>${area.name}</b><br>${area.city}<br>Radio: ${radius}m`);
+
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <a href="#" class="block p-3 rounded-md hover:bg-gray-100 transition duration-150">
+                            <p class="font-medium text-gray-800">${area.name}</p>
+                            <p class="text-sm text-gray-500">${area.city} (${area.type})</p>
+                            <p class="text-sm text-blue-600 font-medium">Perímetro: ${radius}m</p>
+                        </a>`;
+                    li.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        map.setView([area.lat, area.lng], 16);
+                        closeMenu();
+                    });
+                    placesList.appendChild(li);
+                });
+            }
+
+            // --- 5. MANEJO DEL MENÚ LATERAL ---
+            function openMenu() {
+                sideMenu.classList.add('menu-open');
+                menuOverlay.classList.remove('hidden');
+            }
+            function closeMenu() {
+                sideMenu.classList.remove('menu-open');
+                menuOverlay.classList.add('hidden');
+            }
+            menuButton.addEventListener('click', openMenu);
+            closeMenuButton.addEventListener('click', closeMenu);
+            menuOverlay.addEventListener('click', closeMenu);
+
+            // --- 6. LÓGICA DE GEOLOCALIZACIÓN ---
+            checkButton.addEventListener('click', () => {
+                if (!navigator.geolocation) {
+                    showStatus("Geolocalización no soportada.", "bg-yellow-500", "");
+                    return;
+                }
+                checkButton.disabled = true;
+                checkButtonText.textContent = "Obteniendo ubicación...";
+                checkSpinner.classList.remove('hidden');
+                snapshotButton.classList.add('hidden'); // Ocultar botón de evidencia
+                
+                navigator.geolocation.getCurrentPosition(onLocationSuccess, onLocationError, { enableHighAccuracy: true });
+            });
+
+            function onLocationSuccess(position) {
+                const userLat = position.coords.latitude;
+                const userLng = position.coords.longitude;
+                const userLocation = L.latLng(userLat, userLng);
+
+                if (userMarker) {
+                    userMarker.setLatLng(userLocation);
+                } else {
+                    userMarker = L.marker(userLocation, {
+                        icon: L.icon({
+                            iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+                            iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34],
+                            shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+                            shadowSize: [41, 41], className: 'user-marker'
+                        })
+                    }).addTo(map);
+                }
+
+                userMarker.bindPopup("<b>¡Estás aquí!</b>").openPopup();
+                map.setView(userLocation, 16);
+                
+                // Forzar a Leaflet a redibujar antes del snapshot (importante)
+                map.invalidateSize(); 
+                
+                checkProximity(userLocation);
+            }
+
+            function onLocationError(error) {
+                let message = "Error al obtener la ubicación.";
+                if (error.code === error.PERMISSION_DENIED) message = "Permiso de ubicación denegado.";
+                showStatus(message, "bg-red-500", "");
+                resetButton();
+            }
+
+            function checkProximity(userLocation) {
+                let isProhibited = false;
+                let closestDistance = Infinity;
+                let statusMessage = "";
+
+                restrictedAreas.forEach(area => {
+                    const areaLocation = L.latLng(area.lat, area.lng);
+                    const distance = userLocation.distanceTo(areaLocation);
+                    if (distance < closestDistance) closestDistance = distance;
+                    const radius = getPerimeter(area.type, area.city);
+                    if (distance <= radius) isProhibited = true;
+                });
+                
+                if (isProhibited) {
+                    statusMessage = "Actividad Prohibida";
+                    showStatus(statusMessage, "bg-red-500", `Estás dentro de un área restringida. Distancia: ${closestDistance.toFixed(0)}m`);
+                } else {
+                    statusMessage = "Actividad Permitida";
+                    showStatus(statusMessage, "bg-green-500", `Zona restringida más cercana: ${closestDistance.toFixed(0)} metros`);
+                }
+                
+                // Guardar datos para la evidencia
+                lastCheckData = {
+                    status: statusMessage,
+                    statusClass: isProhibited ? 'text-red-600' : 'text-green-600',
+                    location: userLocation,
+                    timestamp: new Date(),
+                    distance: closestDistance.toFixed(0) + 'm'
+                };
+                
+                resetButton();
+                snapshotButton.classList.remove('hidden'); // Mostrar botón de evidencia
+            }
+            
+            // --- 7. FUNCIONES AUXILIARES DE UI ---
+            function showStatus(message, bgColor, distanceMsg) {
+                statusText.textContent = message;
+                distanceText.textContent = distanceMsg;
+                statusResult.classList.remove('bg-green-500', 'bg-red-500', 'bg-yellow-500');
+                statusResult.classList.add(bgColor);
+                statusResult.classList.remove('hidden');
+            }
+            
+            function resetButton() {
+                checkButton.disabled = false;
+                checkButtonText.textContent = "¿Puedo hacer la actividad X aquí?";
+                checkSpinner.classList.add('hidden');
+            }
+            
+            // --- 8. NUEVA LÓGICA DE EVIDENCIA (SNAPSHOT) ---
+            
+            // Al hacer clic en "Crear Evidencia"
+            snapshotButton.addEventListener('click', async () => {
+                if (!lastCheckData) return;
+
+                snapshotButton.disabled = true;
+                snapshotButtonText.textContent = "Generando...";
+                snapshotSpinner.classList.remove('hidden');
+
+                try {
+                    // 1. Tomar la "foto" del mapa
+                    //    Usamos {useCORS: true} para intentar capturar los tiles del mapa.
+                    const canvas = await html2canvas(mapElement, { 
+                        useCORS: true,
+                        logging: false // Desactivar logs de html2canvas en consola
+                    });
+                    const imageDataUrl = canvas.toDataURL('image/png');
+                    
+                    // 2. Poner la "foto" en el modal
+                    snapshotImage.src = imageDataUrl;
+                    
+                    // 3. Formatear la fecha y hora
+                    const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZoneName: 'short' };
+                    const formattedDate = lastCheckData.timestamp.toLocaleString('es-CO', options);
+
+                    // 4. Poner la información de texto en el modal
+                    snapshotInfo.innerHTML = `
+                        <p><strong>Estado:</strong> <span class="font-bold ${lastCheckData.statusClass}">${lastCheckData.status}</span></p>
+                        <p><strong>Fecha y Hora:</strong> ${formattedDate}</p>
+                        <p><strong>Coordenadas:</strong> ${lastCheckData.location.lat.toFixed(6)}, ${lastCheckData.location.lng.toFixed(6)}</p>
+                        <p><strong>Distancia más cercana:</strong> ${lastCheckData.distance}</p>
+                    `;
+                    
+                    // 5. Mostrar el modal
+                    snapshotModal.classList.remove('hidden');
+
+                } catch (err) {
+                    console.error("Error al generar snapshot:", err);
+                    alert("Error al generar la evidencia. Inténtalo de nuevo.");
+                } finally {
+                    snapshotButton.disabled = false;
+                    snapshotButtonText.textContent = "Crear Evidencia";
+                    snapshotSpinner.classList.add('hidden');
+                }
+            });
+
+            // Al hacer clic en "Cerrar" en el modal
+            closeModalButton.addEventListener('click', () => {
+                snapshotModal.classList.add('hidden');
+            });
+            
+            // Al hacer clic en "Descargar"
+            downloadSnapshotButton.addEventListener('click', async () => {
+                try {
+                    // Tomamos una "foto" del *contenido del modal* (la tarjeta de evidencia)
+                    const canvas = await html2canvas(evidenceCard, { logging: false });
+                    const imageDataUrl = canvas.toDataURL('image/png');
+                    
+                    // Crear un enlace temporal para la descarga
+                    const link = document.createElement('a');
+                    link.href = imageDataUrl;
+                    link.download = `evidencia_geo_${lastCheckData.timestamp.toISOString()}.png`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                } catch (err) {
+                    console.error("Error al descargar snapshot:", err);
+                    alert("Error al descargar la evidencia.");
+                }
+            });
+
+            // --- INICIAR LA APP ---
+            initMap();
+        });
+    </script>
+</body>
+</html>
