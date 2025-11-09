@@ -187,6 +187,8 @@
                         crossOrigin: 'anonymous'
                     }).addTo(map);
                     populateRestrictedAreas();
+                    // Añadir control personalizado para centrar en la ubicación del usuario
+                    try { createCenterControl(); } catch (err) { /* si algo falla, no detener la app */ }
                 } catch (e) {
                     console.error("Error al inicializar el mapa:", e);
                     mapElement.innerHTML = "<div class='p-4 text-center text-red-500'>Error al cargar el mapa.</div>";
@@ -315,6 +317,78 @@
                 
                 resetButton();
                 snapshotButton.classList.remove('hidden'); // Mostrar botón de evidencia
+            }
+            
+            // --- Helper: crear o mover marcador de usuario ---
+            function createOrMoveUserMarker(latlng) {
+                if (!map) return;
+                if (userMarker) {
+                    userMarker.setLatLng(latlng);
+                } else {
+                    userMarker = L.marker(latlng, {
+                        icon: L.icon({
+                            iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+                            iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34],
+                            shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+                            shadowSize: [41, 41], className: 'user-marker'
+                        })
+                    }).addTo(map);
+                }
+                userMarker.bindPopup("<b>¡Estás aquí!</b>");
+            }
+
+            // --- Control personalizado: botón "centrar en mi ubicación" ---
+            function createCenterControl() {
+                if (!map || !L || !L.Control) return;
+                const CenterControl = L.Control.extend({
+                    options: { position: 'topleft' },
+                    onAdd: function () {
+                        const container = L.DomUtil.create('div', 'leaflet-bar');
+                        const btn = L.DomUtil.create('a', '', container);
+                        btn.href = '#';
+                        btn.title = 'Centrar en mi ubicación';
+btn.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="black">
+    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+</svg>
+    `;
+
+    // --- 👇 AQUÍ ESTÁ LA SOLUCIÓN 👇 ---
+                        // Añadimos estilos flex para centrar el SVG dentro del botón <a>
+                        btn.style.display = 'flex';         // NUEVO: Activa Flexbox
+                        btn.style.alignItems = 'center';    // NUEVO: Centra verticalmente
+                        btn.style.justifyContent = 'center';// NUEVO: Centra horizontalmente
+                        // --- FIN DE LA SOLUCIÓN ---
+
+                        L.DomEvent.disableClickPropagation(container);
+                        L.DomEvent.on(btn, 'click', L.DomEvent.stop)
+                                 .on(btn, 'click', () => {
+                                    btn.classList.add('opacity-50');
+                                    btn.style.pointerEvents = 'none';
+                                    if (!navigator.geolocation) {
+                                        alert('Geolocalización no soportada en este navegador.');
+                                        btn.classList.remove('opacity-50');
+                                        btn.style.pointerEvents = '';
+                                        return;
+                                    }
+                                    navigator.geolocation.getCurrentPosition((pos) => {
+                                        const userLoc = L.latLng(pos.coords.latitude, pos.coords.longitude);
+                                        createOrMoveUserMarker(userLoc);
+                                        map.setView(userLoc, 16);
+                                        map.invalidateSize();
+                                        btn.classList.remove('opacity-50');
+                                        btn.style.pointerEvents = '';
+                                    }, (err) => {
+                                        alert('Error al obtener la ubicación.');
+                                        btn.classList.remove('opacity-50');
+                                        btn.style.pointerEvents = '';
+                                    }, { enableHighAccuracy: true });
+                                 });
+
+                        return container;
+                    }
+                });
+                map.addControl(new CenterControl());
             }
             
             // --- 7. FUNCIONES AUXILIARES DE UI ---
