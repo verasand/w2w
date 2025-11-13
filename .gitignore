@@ -1,2 +1,6 @@
 .env
 docs/activity-log.md
+# Firebase
+.firebase/
+*emulators.log
+*.log
