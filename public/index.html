@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+    
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -42,6 +43,12 @@
             100% { transform: rotate(360deg); }
         }
     </style>
+    <script defer src="/__/firebase/12.6.0/firebase-app-compat.js"></script>
+    <script defer src="/__/firebase/12.6.0/firebase-auth-compat.js"></script>
+    <script defer src="/__/firebase/12.6.0/firebase-firestore-compat.js"></script>
+    <script defer src="/__/firebase/12.6.0/firebase-storage-compat.js"></script>
+
+    <script defer src="/__/firebase/init.js?useEmulator=true"></script>
 </head>
 <body class="bg-gray-100">
 
@@ -129,8 +136,11 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-
-            // --- 1. CONFIGURACIÓN INICIAL ---
+                // 1. CREA LAS VARIABLES DE FIREBASE
+            const auth = firebase.auth();
+            const db = firebase.firestore();
+            const storage = firebase.storage();
+            // --- 2. CONFIGURACIÓN INICIAL ---
             const initialCoords = [3.0108578687016765, -76.48504798984096];
             const restrictedAreas = [
                 { name: "Colegio Fernández", lat: 3.0050, lng: -76.4870, type: 'school', city: 'Santander de Quilichao' },
