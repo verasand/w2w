@@ -60,7 +60,14 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" /></svg>
             </button>
             <h1 class="text-xl font-bold text-gray-800">Geo-Cercas App</h1>
-            <div class="w-8"></div>
+            <div class="w-32 flex items-center justify-end gap-2">
+                <button id="loginButton" class="text-sm bg-blue-600 text-white py-1 px-3 rounded-md hover:bg-blue-700">Login con Google</button>
+                <div id="userInfo" class="hidden items-center gap-2">
+                    <img id="userPhoto" src="" alt="Foto" class="h-8 w-8 rounded-full" />
+                    <span id="userName" class="text-sm font-medium text-gray-800"></span>
+                    <button id="logoutButton" class="ml-2 text-xs text-gray-500 hover:text-gray-700">Salir</button>
+                </div>
+            </div>
         </header>
 
         <!-- 2. Contenedor del Mapa -->
@@ -515,6 +522,61 @@ btn.innerHTML = `
                     console.error("Error al descargar snapshot:", err);
                     alert("Error al descargar la evidencia.");
                 }
+            });
+
+            // --- AUTENTICACIÓN: Login con Google (Firebase Auth) ---
+            // Elementos del UI de auth
+            const loginButton = document.getElementById('loginButton');
+            const userInfo = document.getElementById('userInfo');
+            const userPhoto = document.getElementById('userPhoto');
+            const userName = document.getElementById('userName');
+            const logoutButton = document.getElementById('logoutButton');
+
+            // Mostrar datos de usuario en UI
+            function showUser(user) {
+                if (!user) return showLogin();
+                loginButton.classList.add('hidden');
+                userInfo.classList.remove('hidden');
+                userPhoto.src = user.photoURL || '';
+                userName.textContent = user.displayName || user.email || 'Usuario';
+            }
+
+            function showLogin() {
+                loginButton.classList.remove('hidden');
+                userInfo.classList.add('hidden');
+                userPhoto.src = '';
+                userName.textContent = '';
+            }
+
+            // Botón de login: abrir popup de Google
+            loginButton.addEventListener('click', async () => {
+                loginButton.disabled = true;
+                const provider = new firebase.auth.GoogleAuthProvider();
+                try {
+                    await auth.signInWithPopup(provider);
+                    // onAuthStateChanged manejará la UI
+                } catch (err) {
+                    console.error('Error en signInWithPopup:', err);
+                    alert('Error al iniciar sesión. Revisa la consola.');
+                } finally {
+                    loginButton.disabled = false;
+                }
+            });
+
+            // Botón de logout
+            logoutButton.addEventListener('click', async () => {
+                try {
+                    await auth.signOut();
+                } catch (err) {
+                    console.error('Error al cerrar sesión:', err);
+                    alert('Error al cerrar sesión. Revisa la consola.');
+                }
+            });
+
+            // Observador de estado de autenticación
+            auth.onAuthStateChanged((user) => {
+                if (user) showUser(user);
+                else showLogin();
             });
 
             // --- INICIAR LA APP ---
