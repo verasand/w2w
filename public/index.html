@@ -135,19 +135,14 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
                 // 1. CREA LAS VARIABLES DE FIREBASE
             const auth = firebase.auth();
             const db = firebase.firestore();
             const storage = firebase.storage();
             // --- 2. CONFIGURACIÓN INICIAL ---
             const initialCoords = [3.0108578687016765, -76.48504798984096];
-            const restrictedAreas = [
-                { name: "Colegio Fernández", lat: 3.0050, lng: -76.4870, type: 'school', city: 'Santander de Quilichao' },
-                { name: "Sede Educativa Local", lat: 3.0095, lng: -76.4810, type: 'school', city: 'Santander de Quilichao' },
-                { name: "Hospital Local", lat: 3.0110, lng: -76.4820, type: 'hospital', city: 'Santander de Quilichao' },
-                { name: "Colegio Berchmans", lat: 3.4015, lng: -76.5413, type: 'school', city: 'Cali' }
-            ];
+            let restrictedAreas = [];
 
             // --- Elementos del DOM ---
             const mapElement = document.getElementById('map');
@@ -188,51 +183,84 @@
             }
 
             // --- 3. INICIALIZACIÓN DEL MAPA ---
-            function initMap() {
-                try {
-                    map = L.map(mapElement).setView(initialCoords, 14);
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-                        // Opciones para html2canvas (permitir uso cross-origin de tiles)
-                        crossOrigin: 'anonymous'
-                    }).addTo(map);
-                    populateRestrictedAreas();
-                    // Añadir control personalizado para centrar en la ubicación del usuario
-                    try { createCenterControl(); } catch (err) { /* si algo falla, no detener la app */ }
-                } catch (e) {
-                    console.error("Error al inicializar el mapa:", e);
-                    mapElement.innerHTML = "<div class='p-4 text-center text-red-500'>Error al cargar el mapa.</div>";
-                }
-            }
+// MAPA ASÍNCRONO
+async function initMap() {
+    try {
+        map = L.map(mapElement).setView(initialCoords, 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            crossOrigin: 'anonymous'
+        }).addTo(map);
+
+        // ¡AQUÍ ESTÁ EL CAMBIO!
+        // Espera a que las zonas se carguen de la DB antes de continuar
+        await fetchAndDrawAreas(); 
+
+        // Añadir control personalizado para centrar
+        try { createCenterControl(); } catch (err) { /* si algo falla, no detener la app */ }
+
+    } catch (e) {
+        console.error("Error al inicializar el mapa:", e);
+        mapElement.innerHTML = "<div class='p-4 text-center text-red-500'>Error al cargar el mapa.</div>";
+    }
+}
             
             // --- 4. DIBUJAR ZONAS Y POBLAR MENÚ ---
-            function populateRestrictedAreas() {
-                if (!map) return;
-                placesList.innerHTML = ''; 
-                restrictedAreas.forEach(area => {
-                    const radius = getPerimeter(area.type, area.city);
-                    L.circle([area.lat, area.lng], {
-                        color: 'red', fillColor: '#f03', fillOpacity: 0.3, radius: radius
-                    }).addTo(map);
-                    L.marker([area.lat, area.lng])
-                        .addTo(map)
-                        .bindPopup(`<b>${area.name}</b><br>${area.city}<br>Radio: ${radius}m`);
+            // NUEVA FUNCIÓN ASÍNCRONA PARA CARGAR DATOS
+async function fetchAndDrawAreas() {
+    console.log("Buscando áreas en Firestore...");
+    try {
+        // 1. Llama a la base de datos (db)
+        const snapshot = await db.collection("restricted_areas").get();
 
-                    const li = document.createElement('li');
-                    li.innerHTML = `
-                        <a href="#" class="block p-3 rounded-md hover:bg-gray-100 transition duration-150">
-                            <p class="font-medium text-gray-800">${area.name}</p>
-                            <p class="text-sm text-gray-500">${area.city} (${area.type})</p>
-                            <p class="text-sm text-blue-600 font-medium">Perímetro: ${radius}m</p>
-                        </a>`;
-                    li.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        map.setView([area.lat, area.lng], 16);
-                        closeMenu();
-                    });
-                    placesList.appendChild(li);
-                });
-            }
+        if (snapshot.empty) {
+            console.warn("No se encontraron áreas en la base de datos.");
+            return;
+        }
+
+        placesList.innerHTML = ''; // Limpiar el menú lateral
+
+        // 2. Itera sobre cada "documento" encontrado
+        snapshot.docs.forEach(doc => {
+            const area = doc.data();
+
+            // 3. Llena el array global (para que 'checkProximity' funcione)
+            restrictedAreas.push(area); 
+
+            // 4. Dibuja en el mapa (la lógica de la vieja función)
+            const radius = getPerimeter(area.type, area.city);
+
+            L.circle([area.lat, area.lng], {
+                color: 'red', fillColor: '#f03', fillOpacity: 0.3, radius: radius
+            }).addTo(map);
+
+            L.marker([area.lat, area.lng])
+                .addTo(map)
+                .bindPopup(`<b>${area.name}</b><br>${area.city}<br>Radio: ${radius}m`);
+
+            // 5. Rellena el menú lateral
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <a href="#" class="block p-3 rounded-md hover:bg-gray-100 transition duration-150">
+                    <p class="font-medium text-gray-800">${area.name}</p>
+                    <p class="text-sm text-gray-500">${area.city} (${area.type})</p>
+                    <p class="text-sm text-blue-600 font-medium">Perímetro: ${radius}m</p>
+                </a>`;
+            li.addEventListener('click', (e) => {
+                e.preventDefault();
+                map.setView([area.lat, area.lng], 16);
+                closeMenu();
+            });
+            placesList.appendChild(li);
+        });
+
+        console.log("Áreas cargadas y dibujadas:", restrictedAreas);
+
+    } catch (error) {
+        console.error("Error al cargar áreas desde Firestore:", error);
+        alert("Error al cargar las zonas. Revisa la consola (F12).");
+    }
+}
 
             // --- 5. MANEJO DEL MENÚ LATERAL ---
             function openMenu() {
@@ -490,7 +518,7 @@ btn.innerHTML = `
             });
 
             // --- INICIAR LA APP ---
-            initMap();
+            await initMap();
         });
     </script>
 </body>
