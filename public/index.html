@@ -408,6 +408,8 @@ L.marker([area.lat, area.lng], { icon: customIcon }) // <-- ¡AQUÍ ESTÁ EL CAM
                 const userLng = position.coords.longitude;
                 const userLocation = L.latLng(userLat, userLng);
 
+                updateAndSortSideMenu(userLocation);
+
                 if (userMarker) {
                     userMarker.setLatLng(userLocation);
                 } else {
@@ -469,6 +471,52 @@ L.marker([area.lat, area.lng], { icon: customIcon }) // <-- ¡AQUÍ ESTÁ EL CAM
                 
                 resetButton();
                 snapshotButton.classList.remove('hidden'); // Mostrar botón de evidencia
+            }
+
+
+
+            // --- 9. NUEVA FUNCIÓN: ACTUALIZAR Y ORDENAR MENÚ LATERAL ---
+            function updateAndSortSideMenu(userLocation) {
+                if (!restrictedAreas || restrictedAreas.length === 0) return;
+
+                // 1. Itera por todas las áreas y calcula su distancia desde el usuario
+                restrictedAreas.forEach(area => {
+                    const areaLocation = L.latLng(area.lat, area.lng);
+                    // Guarda la distancia calculada en el propio objeto
+                    area.currentDistance = userLocation.distanceTo(areaLocation);
+                });
+
+                // 2. Ordena el array 'restrictedAreas' de menor a mayor distancia
+                restrictedAreas.sort((a, b) => a.currentDistance - b.currentDistance);
+
+                // 3. Limpia el contenido actual del menú lateral
+                placesList.innerHTML = '';
+
+                // 4. Vuelve a construir la lista, ahora ordenada y con la nueva info
+                restrictedAreas.forEach(area => {
+                    const li = document.createElement('li');
+                    
+                    // Formatea la distancia para mostrarla (ej: "123m")
+                    const distanceDisplay = area.currentDistance.toFixed(0) + 'm';
+
+                    // ¡AQUÍ ESTÁ EL CAMBIO!
+                    // Se reemplaza "Perímetro" por "Distancia"
+                    li.innerHTML = `
+                        <a href="#" class="block p-3 rounded-md hover:bg-gray-100 transition duration-150">
+                            <p class="font-medium text-gray-800">${area.name}</p>
+                            <p class="text-sm text-gray-500">${area.city} (${area.type})</p>
+                            <p class="text-sm text-blue-600 font-medium">Distancia: ${distanceDisplay}</p>
+                        </a>`;
+                    
+                    // Se vuelve a añadir el listener para que al hacer clic se centre en el mapa
+                    li.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        map.setView([area.lat, area.lng], 16);
+                        closeMenu();
+                    });
+                    
+                    placesList.appendChild(li);
+                });
             }
             
             // --- Helper: crear o mover marcador de usuario ---
