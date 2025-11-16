@@ -70,10 +70,37 @@
             </div>
         </header>
 
-        <!-- 2. Contenedor del Mapa -->
-        <main class="flex-grow relative z-0">
+<main class="flex-grow relative z-0">
+            
             <div id="map" class="absolute inset-0"></div>
-        </main>
+
+            <div id="legend" class="absolute bottom-4 left-4 [z-index:1000] bg-white bg-opacity-80 backdrop-blur-sm p-3 rounded-lg shadow-lg">
+                <h4 class="font-bold text-sm mb-2 text-gray-800">Áreas restringidas</h4>
+                <div class="space-y-2">
+                    
+                    <div class="flex items-center gap-2">
+                        <img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png" class="h-6 w-auto -ml-1">
+                        <span class="text-xs text-gray-700 font-medium">Escuela</span>
+                    </div>
+                    
+                    <div class="flex items-center gap-2">
+                        <img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png" class="h-6 w-auto -ml-1">
+                        <span class="text-xs text-gray-700 font-medium">Parque</span>
+                    </div>
+                    
+                    <div class="flex items-center gap-2">
+                        <img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png" class="h-6 w-auto -ml-1">
+                        <span class="text-xs text-gray-700 font-medium">Centro Deportivo</span>
+                    </div>
+                    
+                    <div class="flex items-center gap-2">
+                        <img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png" class="h-6 w-auto -ml-1">
+                        <span class="text-xs text-gray-700 font-medium">Otro</span>
+                    </div>
+
+                </div>
+            </div>
+            </main>
 
         <!-- 3. Panel de Acción (Footer) -->
         <footer class="p-4 bg-white shadow-top z-10">
@@ -181,13 +208,89 @@
             let lastCheckData = null; // Variable para guardar los datos de la última revisión
 
             // --- 2. LÓGICA DE PERÍMETRO DINÁMICO ---
+// --- 2. LÓGICA DE PERÍMETRO DINÁMICO (Basada en Decreto Municipal) ---
             function getPerimeter(type, city) {
-                if (type === 'school') {
-                    if (city === 'Cali') return 200;
-                    if (city === 'Santander de Quilichao') return 80;
+                
+                // El parámetro 'type' ya no se usa, pero lo mantenemos
+                // para que no falle el código que la llama.
+
+                if (city === 'Cali') {
+                    return 200; // 200 metros para Cali
                 }
-                return 150; // Default
+                
+                if (city === 'Santander de Quilichao') {
+                    return 60;  // 60 metros para Santander
+                }
+
+                // Un valor por defecto si la ciudad no es ninguna de las dos
+                // o si el campo 'city' está vacío en el JSON.
+                return 50; 
             }
+// --- 3. NUEVA FUNCIÓN: Obtener ícono por tipo ---
+            function getIconForArea(type) {
+                // Convertir a minúsculas para seguridad
+                const lowerCaseType = type ? type.toLowerCase() : '';
+
+                // URL base de los marcadores
+                const baseUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/';
+                
+                let iconUrl = baseUrl + 'marker-icon-2x-grey.png'; // Ícono gris por defecto
+
+                if (lowerCaseType === 'school') {
+                    iconUrl = baseUrl + 'marker-icon-2x-red.png'; // Rojo para escuelas
+                } else if (lowerCaseType === 'park') {
+                    iconUrl = baseUrl + 'marker-icon-2x-green.png'; // Verde para parques
+                } else if (lowerCaseType === 'sport center') {
+                    iconUrl = baseUrl + 'marker-icon-2x-blue.png'; // Azul para deportes
+                }
+                // (Puedes añadir más 'else if' para otros tipos)
+
+                const shadowUrl = baseUrl + 'marker-shadow.png';
+
+                // Devolver un objeto L.icon de Leaflet
+                return L.icon({
+                    iconUrl: iconUrl,
+                    shadowUrl: shadowUrl,
+                    iconSize: [25, 41],   // Tamaño estándar de Leaflet
+                    iconAnchor: [12, 41],  // Punto de anclaje
+                    popupAnchor: [1, -34],  // Dónde sale el popup
+                    shadowSize: [41, 41]
+                });
+            }
+
+
+
+async function seedDatabase() {
+    try {
+        // 1. Revisa si la base de datos YA tiene datos
+        const checkSnapshot = await db.collection("restricted_areas").limit(1).get();
+        if (!checkSnapshot.empty) {
+            console.log("La base de datos ya tiene datos. No se necesita 'seed'.");
+            return; // Salir de la función, ya está poblada
+        }
+
+        console.log("Base de datos vacía. Poblando con datos de data.json...");
+
+        // 2. Carga el archivo data.json
+        const response = await fetch('./data.json');
+        const locations = await response.json();
+
+        // 3. Itera y agrega cada locación
+        let count = 0;
+        for (const location of locations) {
+            // 'await' es opcional aquí, pero es más seguro para el emulador
+            await db.collection("restricted_areas").add(location);
+            count++;
+        }
+
+        console.log(`¡'Seed' completado! Se agregaron ${count} locaciones.`);
+
+    } catch (error) {
+        console.error("Error durante el 'seed' de la base de datos:", error);
+    }
+}
+
+
 
             // --- 3. INICIALIZACIÓN DEL MAPA ---
 // MAPA ASÍNCRONO
@@ -241,9 +344,13 @@ async function fetchAndDrawAreas() {
                 color: 'red', fillColor: '#f03', fillOpacity: 0.3, radius: radius
             }).addTo(map);
 
-            L.marker([area.lat, area.lng])
-                .addTo(map)
-                .bindPopup(`<b>${area.name}</b><br>${area.city}<br>Radio: ${radius}m`);
+            // 4b. Obtener el ícono personalizado basado en el tipo
+const customIcon = getIconForArea(area.type);
+
+// 4c. Crear el marcador USANDO el nuevo ícono
+L.marker([area.lat, area.lng], { icon: customIcon }) // <-- ¡AQUÍ ESTÁ EL CAMBIO!
+    .addTo(map)
+    .bindPopup(`<b>${area.name}</b><br>${area.city}<br>Radio: ${radius}m`);
 
             // 5. Rellena el menú lateral
             const li = document.createElement('li');
@@ -580,6 +687,7 @@ btn.innerHTML = `
             });
 
             // --- INICIAR LA APP ---
+            await seedDatabase();
             await initMap();
         });
     </script>

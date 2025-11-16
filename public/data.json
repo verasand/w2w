@@ -1,0 +1,210 @@
+[
+  {
+    "name": "Escuela Rafael Tello",
+    "type": "School",
+    "lat": 3.008154569,
+    "lng": -76.4821368,
+    "city": "Santander de Quilichao",
+    "department": "Cauca"
+  },
+  {
+    "name": "Colegio Alegría del Saber",
+    "type": "School",
+    "lat": 3.008789766,
+    "lng": -76.48132127,
+    "city": "Santander de Quilichao",
+    "department": "Cauca"
+  },
+  {
+    "name": "MacArthur English Academy",
+    "type": "School",
+    "lat": 3.006696845,
+    "lng": -76.48080551,
+    "city": "Santander de Quilichao",
+    "department": "Cauca"
+  },
+  {
+    "name": "Polideportivo Los Guasimos",
+    "type": "Sport center",
+    "lat": 3.005298851,
+    "lng": -76.47968934,
+    "city": "Santander de Quilichao",
+    "department": "Cauca"
+  },
+  {
+    "name": "Institución Educativa Instituto Técnico",
+    "type": "School",
+    "lat": 3.004744422,
+    "lng": -76.48080076,
+    "city": "Santander de Quilichao",
+    "department": "Cauca"
+  },
+  {
+    "name": "Parque Simón Bolívar",
+    "type": "Park",
+    "lat": 3.004140387,
+    "lng": -76.48083181,
+    "city": "Santander de Quilichao",
+    "department": "Cauca"
+  },
+  {
+    "name": "Institución Educativa Técnico Ambiental Fernández Guerra",
+    "type": "School",
+    "lat": 3.008053986,
+    "lng": -76.47598052,
+    "city": "Santander de Quilichao",
+    "department": "Cauca"
+  },
+  {
+    "name": "Colegio Niño Jesús de Praga",
+    "type": "School",
+    "lat": 3.009483295,
+    "lng": -76.47894955,
+    "city": "Santander de Quilichao",
+    "department": "Cauca"
+  },
+  {
+    "name": "Colegio Fernández Guerra Los Samanes",
+    "type": "School",
+    "lat": 3.009506956,
+    "lng": -76.47942026,
+    "city": "Santander de Quilichao",
+    "department": "Cauca"
+  },
+  {
+    "name": "Liceo Pedagógico Nueva Generación",
+    "type": "School",
+    "lat": 3.01216638,
+    "lng": -76.47579611,
+    "city": "Santander de Quilichao",
+    "department": "Cauca"
+  },
+  {
+    "name": "Parque de La Urbanización de Calama",
+    "type": "Park",
+    "lat": 3.008021507,
+    "lng": -76.47807713,
+    "city": "Santander de Quilichao",
+    "department": "Cauca"
+  },
+  {
+    "name": "Pequeños Bilingues Quilichao",
+    "type": "School",
+    "lat": 3.007918235,
+    "lng": -76.47863925,
+    "city": "Santander de Quilichao",
+    "department": "Cauca"
+  },
+  {
+    "name": "Parque Francisco de Paula Santander",
+    "type": "Park",
+    "lat": 3.005835743,
+    "lng": -76.48294361,
+    "city": "Santander de Quilichao",
+    "department": "Cauca"
+  },
+  {
+    "name": "Institución Educativa Limbania Velasco",
+    "type": "School",
+    "lat": 3.006634747,
+    "lng": -76.48170569,
+    "city": "Santander de Quilichao",
+    "department": "Cauca"
+  },
+  {
+    "name": "Universidad del Cauca",
+    "type": "School",
+    "lat": 3.006211051,
+    "lng": -76.48211895,
+    "city": "Santander de Quilichao",
+    "department": "Cauca"
+  },
+  {
+    "name": "Parque Santísima Trinidad",
+    "type": "Park",
+    "lat": 3.012542088,
+    "lng": -76.48213457,
+    "city": "Santander de Quilichao",
+    "department": "Cauca"
+  },
+  {
+    "name": "Colegio Francisco José de Caldas",
+    "type": "School",
+    "lat": 3.012719347,
+    "lng": -76.48264727,
+    "city": "Santander de Quilichao",
+    "department": "Cauca"
+  },
+  {
+    "name": "Primaria Francisco José de Caldas",
+    "type": "School",
+    "lat": 3.011739895,
+    "lng": -76.4829343,
+    "city": "Santander de Quilichao",
+    "department": "Cauca"
+  },
+  {
+    "name": "Plazoleta El Rosario",
+    "type": "Park",
+    "lat": 3.001269119,
+    "lng": -76.47884925,
+    "city": "Santander de Quilichao",
+    "department": "Cauca"
+  },
+  {
+    "name": "Institución Educativa Cauca",
+    "type": "School",
+    "lat": 3.003645732,
+    "lng": -76.48322604,
+    "city": "Santander de Quilichao",
+    "department": "Cauca"
+  },
+  {
+    "name": "Escuela Francisco de Paula Santander",
+    "type": "School",
+    "lat": 3.003487992,
+    "lng": -76.48253261,
+    "city": "Santander de Quilichao",
+    "department": "Cauca"
+  },
+  {
+    "name": "Parque La Joyita",
+    "type": "Park",
+    "lat": 3.012867556,
+    "lng": -76.48557537,
+    "city": "Santander de Quilichao",
+    "department": "Cauca"
+  },
+  {
+    "name": "Parque Las Acacias",
+    "type": "Park",
+    "lat": 3.017022371,
+    "lng": -76.47753551,
+    "city": "Santander de Quilichao",
+    "department": "Cauca"
+  },
+  {
+    "name": "Universidad del Valle",
+    "type": "School",
+    "lat": 3.023108337,
+    "lng": -76.48316259,
+    "city": "Santander de Quilichao",
+    "department": "Cauca"
+  },
+  {
+    "name": "Parque El Jardín",
+    "type": "Park",
+    "lat": 3.018603908,
+    "lng": -76.48289287,
+    "city": "Santander de Quilichao",
+    "department": "Cauca"
+  },
+  {
+    "name": "Estadio Fabrico Cabrera",
+    "type": "Sport center",
+    "lat": 3.007727089,
+    "lng": -76.48989231,
+    "city": "Santander de Quilichao",
+    "department": "Cauca"
+  }
+]
