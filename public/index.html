@@ -60,8 +60,19 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" /></svg>
             </button>
             <h1 class="text-xl font-bold text-gray-800">W2W: Where to Weed?</h1>
-            <div class="w-32 flex items-center justify-end gap-2">
-                <button id="loginButton" class="text-sm bg-blue-600 text-white py-1 px-3 rounded-md hover:bg-blue-700">Login con Google</button>
+            <div class="flex items-center justify-end gap-2">
+
+                 <!-- Botón de cambiar rol (SIEMPRE visible) -->
+    <button id="roleToggleButton"
+            class="p-2 rounded-full hover:bg-gray-100 focus:outline-none"
+            title="Cambiar rol">
+        <!-- Icono sencillo de usuario con doble flecha -->
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M5.5 20a4.5 4.5 0 0 1 9 0M10 11a3 3 0 1 0-3-3 3 3 0 0 0 3 3Zm6-4h3m0 0-1.5-1.5M19 7l-1.5 1.5M18 13h-3m0 0 1.5-1.5M15 13l1.5 1.5"/>
+        </svg>
+    </button>
+                <button id="loginButton" class="text-sm bg-blue-600 text-white py-1 px-3 rounded-md hover:bg-blue-700">Inicia Sesión</button>
                 <div id="userInfo" class="hidden items-center gap-2">
                     <img id="userPhoto" src="" alt="Foto" class="h-8 w-8 rounded-full" />
                     <span id="userName" class="text-sm font-medium text-gray-800"></span>
@@ -168,6 +179,53 @@
 
     </div>
 
+
+<!-- MODAL DE SELECCIÓN DE ROL -->
+<div id="roleModal" class="fixed inset-0 bg-black bg-opacity-60 z-40 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full overflow-hidden">
+        <!-- Header -->
+        <div class="flex items-center justify-between px-4 py-3 border-b">
+            <h3 class="text-lg font-semibold text-gray-900">Selecciona tu rol</h3>
+            <button id="closeRoleModalButton"
+                    class="p-1 rounded-full hover:bg-gray-100 focus:outline-none"
+                    title="Cerrar">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Body -->
+        <div class="px-4 pt-4 pb-2 space-y-3">
+            <p class="text-sm text-gray-600">
+                Este rol se usará para personalizar la información que ves en la app.
+                Puedes cambiarlo desde el icono junto al login.
+            </p>
+
+            <div class="space-y-2">
+                <button id="roleCivilButton"
+                        class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2">
+                    <span>🙍‍♂️ Soy Civil</span>
+                </button>
+
+                <button id="rolePoliceButton"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2">
+                    <span>👮 Soy Agente de Policía</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-4 pb-4 pt-2 text-xs text-gray-500">
+            <p>Tu selección se guardará en este dispositivo. Si borras la caché del navegador, la app te volverá a preguntar.</p>
+        </div>
+    </div>
+</div>
+
+
+
+
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
                 // 1. CREA LAS VARIABLES DE FIREBASE
@@ -203,9 +261,66 @@
             const snapshotImage = document.getElementById('snapshotImage');
             const snapshotInfo = document.getElementById('snapshotInfo');
 
+
+            // --- NUEVOS ELEMENTOS PARA ROL ---
+            const roleToggleButton = document.getElementById('roleToggleButton');
+            const roleModal = document.getElementById('roleModal');
+            const closeRoleModalButton = document.getElementById('closeRoleModalButton');
+            const roleCivilButton = document.getElementById('roleCivilButton');
+            const rolePoliceButton = document.getElementById('rolePoliceButton');
+            const ROLE_KEY = 'userRole'; // localStorage key
+
             let userMarker = null;
             let map = null;
             let lastCheckData = null; // Variable para guardar los datos de la última revisión
+
+
+            // --- LÓGICA DE SELECCIÓN DE ROL ---
+
+function openRoleModal() {
+    roleModal.classList.remove('hidden');
+}
+
+function closeRoleModal() {
+    roleModal.classList.add('hidden');
+}
+
+function setUserRole(role) {
+    try {
+        localStorage.setItem(ROLE_KEY, role);
+        console.log('Rol guardado:', role);
+    } catch (e) {
+        console.error('Error guardando rol en localStorage:', e);
+    }
+}
+
+// Icono persistente junto al login: abrir modal para cambiar rol
+roleToggleButton.addEventListener('click', () => {
+    openRoleModal();
+});
+
+// Cerrar modal (botón X)
+closeRoleModalButton.addEventListener('click', () => {
+    closeRoleModal();
+});
+
+// Seleccionar "Soy Civil"
+roleCivilButton.addEventListener('click', () => {
+    setUserRole('civilian');
+    closeRoleModal();
+    // Aquí luego podrás adaptar la lógica de la app según el rol
+});
+
+// Seleccionar "Soy Agente de Policía"
+rolePoliceButton.addEventListener('click', () => {
+    setUserRole('police');
+    closeRoleModal();
+    // Aquí luego podrás adaptar la lógica de la app según el rol
+});
+
+
+
+
 
             // --- 2. LÓGICA DE PERÍMETRO DINÁMICO ---
 // --- 2. LÓGICA DE PERÍMETRO DINÁMICO (Basada en Decreto Municipal) ---
@@ -733,6 +848,16 @@ btn.innerHTML = `
                 if (user) showUser(user);
                 else showLogin();
             });
+
+
+            // --- CHEQUEAR ROL AL INICIAR LA APP ---
+// Si no hay rol guardado, mostramos el modal una sola vez.
+const savedRole = localStorage.getItem(ROLE_KEY);
+if (!savedRole) {
+    openRoleModal();
+} else {
+    console.log('Rol previamente guardado:', savedRole);
+}
 
             // --- INICIAR LA APP ---
             await seedDatabase();
