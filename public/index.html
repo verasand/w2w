@@ -63,15 +63,22 @@
             <div class="flex items-center justify-end gap-2">
 
                  <!-- Botón de cambiar rol (SIEMPRE visible) -->
-    <button id="roleToggleButton"
-            class="p-2 rounded-full hover:bg-gray-100 focus:outline-none"
-            title="Cambiar rol">
-        <!-- Icono sencillo de usuario con doble flecha -->
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M5.5 20a4.5 4.5 0 0 1 9 0M10 11a3 3 0 1 0-3-3 3 3 0 0 0 3 3Zm6-4h3m0 0-1.5-1.5M19 7l-1.5 1.5M18 13h-3m0 0 1.5-1.5M15 13l1.5 1.5"/>
-        </svg>
-    </button>
+<button id="roleToggleButton"
+        class="flex flex-col items-center justify-center p-2 focus:outline-none"
+        title="Cambiar rol">
+
+    <span class="text-[10px] text-gray-600 leading-none">Rol:</span>
+
+    <span id="roleCircle"
+          class="flex items-center justify-center h-10 w-10 rounded-full border-[2px]">
+        <span id="roleIcon" class="text-xl"></span>
+    </span>
+
+    <span id="roleLabel"
+          class="text-[11px] font-medium text-gray-700 mt-1 leading-none"></span>
+
+</button>
+
                 <button id="loginButton" class="text-sm bg-blue-600 text-white py-1 px-3 rounded-md hover:bg-blue-700">Inicia Sesión</button>
                 <div id="userInfo" class="hidden items-center gap-2">
                     <img id="userPhoto" src="" alt="Foto" class="h-8 w-8 rounded-full" />
@@ -294,6 +301,26 @@ function setUserRole(role) {
     }
 }
 
+
+function updateRoleIcon() {
+    const currentRole = localStorage.getItem(ROLE_KEY);
+    const roleIcon = document.getElementById('roleIcon');
+    const roleLabel = document.getElementById('roleLabel');
+    const roleCircle = document.getElementById('roleCircle');
+
+    if (currentRole === 'police') {
+        roleIcon.textContent = '👮‍♂️';
+        roleLabel.textContent = 'Policía';
+        roleCircle.style.borderColor = '#2563eb';  // azul
+    } else {
+        roleIcon.textContent = '🙋‍♂️';
+        roleLabel.textContent = 'Civil';
+        roleCircle.style.borderColor = '#16a34a';  // verde
+    }
+}
+
+
+
 // Icono persistente junto al login: abrir modal para cambiar rol
 roleToggleButton.addEventListener('click', () => {
     openRoleModal();
@@ -307,6 +334,7 @@ closeRoleModalButton.addEventListener('click', () => {
 // Seleccionar "Soy Civil"
 roleCivilButton.addEventListener('click', () => {
     setUserRole('civilian');
+    updateRoleIcon();
     closeRoleModal();
     // Aquí luego podrás adaptar la lógica de la app según el rol
 });
@@ -314,6 +342,7 @@ roleCivilButton.addEventListener('click', () => {
 // Seleccionar "Soy Agente de Policía"
 rolePoliceButton.addEventListener('click', () => {
     setUserRole('police');
+    updateRoleIcon();
     closeRoleModal();
     // Aquí luego podrás adaptar la lógica de la app según el rol
 });
@@ -858,6 +887,8 @@ if (!savedRole) {
 } else {
     console.log('Rol previamente guardado:', savedRole);
 }
+
+updateRoleIcon();
 
             // --- INICIAR LA APP ---
             await seedDatabase();
