@@ -42,6 +42,17 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+
+        /* Dentro de la etiqueta <style> en el <head> */
+
+#infoSheetPanel {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Animación suave */
+}
+
+.sheet-open #infoSheetPanel {
+    transform: translateY(0); /* Estado visible */
+}
     </style>
     <script defer src="/__/firebase/12.6.0/firebase-app-compat.js"></script>
     <script defer src="/__/firebase/12.6.0/firebase-auth-compat.js"></script>
@@ -132,6 +143,11 @@
                     <span id="checkButtonText">¿Puedo hacer la actividad X aquí?</span>
                     <div id="checkSpinner" class="spinner hidden"></div>
                 </button>
+
+                       <!-- NUEVO BOTÓN DE INFORMACIÓN (INICIALMENTE OCULTO) -->
+<button id="infoButton" class="w-full bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 transition duration-200 hidden">
+    Información para ti
+</button>
                 
                 <!-- NUEVO BOTÓN DE EVIDENCIA (INICIALMENTE OCULTO) -->
                 <button id="snapshotButton" class="w-full bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition duration-200 hidden flex items-center justify-center gap-2">
@@ -140,6 +156,9 @@
                 </button>
             </div>
         </footer>
+
+
+ 
 
         <!-- 4. Menú Lateral (Oculto por defecto) -->
         <div id="sideMenu" class="absolute inset-y-0 left-0 w-72 bg-white shadow-xl z-30 transform -translate-x-full">
@@ -184,6 +203,33 @@
             </div>
         </div>
 
+    </div>
+
+
+    
+                    <!-- 6. NUEVO BOTTOM SHEET DE INFORMACIÓN (INICIALMENTE OCULTO) -->
+    <div id="infoSheet" class="fixed inset-0 z-40 hidden">
+        <!-- Overlay oscuro -->
+        <div id="infoSheetOverlay" class="absolute inset-0 bg-black bg-opacity-60"></div>
+
+        <!-- Panel deslizante -->
+        <div id="infoSheetPanel" class="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl max-h-[70vh] flex flex-col transform translate-y-full">
+            <!-- Encabezado del panel con manija de arrastre y botón de cierre -->
+            <div class="p-4 border-b sticky top-0 bg-white rounded-t-2xl">
+                <div class="w-10 h-1.5 bg-gray-300 rounded-full mx-auto mb-3"></div>
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-gray-800">Información Relevante</h3>
+                    <button id="closeInfoSheetButton" class="p-2 rounded-full hover:bg-gray-100">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Contenedor del contenido dinámico (con scroll) -->
+            <div id="infoSheetContent" class="overflow-y-auto p-5 space-y-4">
+                <!-- El contenido se inyectará aquí con JavaScript -->
+            </div>
+        </div>
     </div>
 
 
@@ -281,6 +327,13 @@
             let map = null;
             let lastCheckData = null; // Variable para guardar los datos de la última revisión
 
+            // --- Nuevos elementos para Bottom Sheet ---
+            const infoButton = document.getElementById('infoButton');
+            const infoSheet = document.getElementById('infoSheet');
+            const infoSheetOverlay = document.getElementById('infoSheetOverlay');
+            const infoSheetPanel = document.getElementById('infoSheetPanel');
+            const closeInfoSheetButton = document.getElementById('closeInfoSheetButton');
+            const infoSheetContent = document.getElementById('infoSheetContent');
 
             // --- LÓGICA DE SELECCIÓN DE ROL ---
 
@@ -533,6 +586,11 @@ L.marker([area.lat, area.lng], { icon: customIcon }) // <-- ¡AQUÍ ESTÁ EL CAM
             closeMenuButton.addEventListener('click', closeMenu);
             menuOverlay.addEventListener('click', closeMenu);
 
+            // --- Conexiones para el Bottom Sheet ---
+            infoButton.addEventListener('click', openInfoSheet);
+            closeInfoSheetButton.addEventListener('click', closeInfoSheet);
+            infoSheetOverlay.addEventListener('click', closeInfoSheet);
+
             // --- 6. LÓGICA DE GEOLOCALIZACIÓN ---
             checkButton.addEventListener('click', () => {
                 if (!navigator.geolocation) {
@@ -543,6 +601,7 @@ L.marker([area.lat, area.lng], { icon: customIcon }) // <-- ¡AQUÍ ESTÁ EL CAM
                 checkButtonText.textContent = "Obteniendo ubicación...";
                 checkSpinner.classList.remove('hidden');
                 snapshotButton.classList.add('hidden'); // Ocultar botón de evidencia
+                infoButton.classList.add('hidden');
                 
                 navigator.geolocation.getCurrentPosition(onLocationSuccess, onLocationError, { enableHighAccuracy: true });
             });
@@ -615,6 +674,7 @@ L.marker([area.lat, area.lng], { icon: customIcon }) // <-- ¡AQUÍ ESTÁ EL CAM
                 
                 resetButton();
                 snapshotButton.classList.remove('hidden'); // Mostrar botón de evidencia
+                infoButton.classList.remove('hidden'); // Mostrar botón de información
             }
 
 
@@ -680,6 +740,127 @@ L.marker([area.lat, area.lng], { icon: customIcon }) // <-- ¡AQUÍ ESTÁ EL CAM
                 }
                 userMarker.bindPopup("<b>¡Estás aquí!</b>");
             }
+
+
+            function openInfoSheet() {
+    renderInfoSheetContent(); // Genera el contenido ANTES de mostrarlo
+    infoSheet.classList.remove('hidden');
+    // Un pequeño delay para permitir que el DOM se actualice antes de animar
+    setTimeout(() => {
+        infoSheet.classList.add('sheet-open');
+    }, 10); 
+}
+
+function closeInfoSheet() {
+    infoSheet.classList.remove('sheet-open');
+    // Espera a que la animación termine para ocultar el elemento
+    setTimeout(() => {
+        infoSheet.classList.add('hidden');
+    }, 300); // 300ms es la duración de nuestra transición CSS
+}
+
+
+function renderInfoSheetContent() {
+    if (!lastCheckData) {
+        infoSheetContent.innerHTML = '<p>Realiza primero una comprobación de ubicación.</p>';
+        return;
+    }
+
+    const role = localStorage.getItem(ROLE_KEY) || 'civilian';
+    const isPermitted = lastCheckData.status === "Actividad Permitida";
+    let contentHTML = '';
+
+    // --- Escenario: CIVIL ---
+    if (role === 'civilian') {
+        if (isPermitted) {
+            // Civil -> Actividad Permitida
+            contentHTML = `
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="text-3xl">🎉</span>
+                    <h4 class="text-xl font-bold text-green-700">Actividad Permitida</h4>
+                </div>
+                <p class="text-gray-700 mb-4">La actividad que estás consultando está permitida en esta ubicación.</p>
+                <div class="p-3 bg-gray-100 rounded-lg space-y-3">
+                    <div>
+                        <h5 class="font-semibold text-gray-800 mb-2">📘 Recomendaciones de Convivencia</h5>
+                        <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                            <li>Respeta a niños y vecinos cercanos.</li>
+                            <li>Evita generar humo excesivo hacia viviendas.</li>
+                            <li>Mantén un volumen moderado y un comportamiento cívico.</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h5 class="font-semibold text-blue-800 mb-2">👮 En caso de interacción con la policía</h5>
+                        <ul class="list-disc list-inside text-sm text-blue-700 space-y-1">
+                            <li>Permanece calmado y respetuoso.</li>
+                            <li>Informa que has verificado que no estás en una zona restringida.</li>
+                            <li>Puedes grabar el procedimiento (es tu derecho).</li>
+                            <li>Usa la evidencia de la app para apelar un posible comparendo.</li>
+                        </ul>
+                    </div>
+                </div>`;
+        } else {
+            // Civil -> Actividad NO Permitida
+            contentHTML = `
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="text-3xl">❌</span>
+                    <h4 class="text-xl font-bold text-red-700">Actividad No Permitida</h4>
+                </div>
+                <p class="text-gray-700 mb-4">Te encuentras dentro del perímetro de un área restringida.</p>
+                <div class="p-3 bg-gray-100 rounded-lg space-y-3">
+                    <div>
+                        <h5 class="font-semibold text-gray-800 mb-2">📘 ¿Por qué está restringido?</h5>
+                        <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                            <li>Estas áreas están protegidas por el Código de Policía para proteger a menores y fomentar la convivencia.</li>
+                        </ul>
+                    </div>
+                     <div>
+                        <h5 class="font-semibold text-red-800 mb-2">👮 ¿Qué puede pasar?</h5>
+                        <p class="text-sm text-red-700">Los agentes pueden identificarte y, si estás incumpliendo la norma, podrían imponerte un comparendo.</p>
+                    </div>
+                </div>`;
+        }
+    }
+    // --- Escenario: POLICÍA ---
+    else if (role === 'police') {
+        if (isPermitted) {
+            // Policía -> Actividad Permitida por el ciudadano
+            contentHTML = `
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="text-3xl">✔️</span>
+                    <h4 class="text-xl font-bold text-green-700">Ciudadano en Zona Permitida</h4>
+                </div>
+                <p class="text-gray-700 mb-4">El ciudadano está ejerciendo una actividad permitida fuera de perímetros restringidos.</p>
+                <div class="p-3 bg-gray-100 rounded-lg">
+                    <h5 class="font-semibold text-gray-800 mb-2">📘 Procedimiento Recomendado</h5>
+                    <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                        <li>Realizar identificación rutinaria si es necesario.</li>
+                        <li>Verificar visualmente que se trate de la dosis mínima.</li>
+                        <li>Si no hay perturbación a la tranquilidad, no aplica comparendo por consumo.</li>
+                        <li>Recordar que el ciudadano tiene derecho a grabar el procedimiento.</li>
+                    </ul>
+                </div>`;
+        } else {
+            // Policía -> Actividad NO Permitida por el ciudadano
+            contentHTML = `
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="text-3xl">⚠️</span>
+                    <h4 class="text-xl font-bold text-red-700">Ciudadano en Zona Restringida</h4>
+                </div>
+                <p class="text-gray-700 mb-4">El ciudadano se encuentra dentro de un perímetro donde la actividad está prohibida por decreto.</p>
+                <div class="p-3 bg-gray-100 rounded-lg">
+                    <h5 class="font-semibold text-gray-800 mb-2">📘 Procedimiento Recomendado</h5>
+                    <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                        <li>Abordar al ciudadano y solicitar su identificación.</li>
+                        <li>Explicar amablemente por qué la actividad no está permitida en esa ubicación.</li>
+                        <li>Informar sobre el artículo del Código de Policía que respalda la restricción.</li>
+                        <li>Proceder con el comparendo según el debido proceso si aplica.</li>
+                    </ul>
+                </div>`;
+        }
+    }
+    infoSheetContent.innerHTML = contentHTML;
+}
 
             // --- Control personalizado: botón "centrar en mi ubicación" ---
             function createCenterControl() {
