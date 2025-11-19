@@ -335,6 +335,60 @@
             const closeInfoSheetButton = document.getElementById('closeInfoSheetButton');
             const infoSheetContent = document.getElementById('infoSheetContent');
 
+
+            // --- LOGICA DE SWIPE (Deslizar para cerrar) ---
+
+// Seleccionamos el encabezado del panel (donde está la manija gris)
+// Esto asegura que solo se arrastre desde arriba y no interfiera con el scroll del texto
+const sheetHeader = infoSheetPanel.querySelector('.sticky');
+
+let startY = 0;
+let currentY = 0;
+let isDragging = false;
+
+sheetHeader.addEventListener('touchstart', (e) => {
+    // 1. Guardar posición inicial
+    startY = e.touches[0].clientY;
+    isDragging = true;
+    
+    // 2. Quitar transición temporalmente para que el arrastre sea inmediato (sin lag)
+    infoSheetPanel.style.transition = 'none';
+}, { passive: false });
+
+sheetHeader.addEventListener('touchmove', (e) => {
+    if (!isDragging) return;
+    
+    const touchY = e.touches[0].clientY;
+    const delta = touchY - startY;
+
+    // Solo permitir arrastrar hacia abajo (delta > 0)
+    if (delta > 0) {
+        e.preventDefault(); // Evita el scroll de la pantalla de fondo
+        // Mover el panel en tiempo real siguiendo el dedo
+        infoSheetPanel.style.transform = `translateY(${delta}px)`;
+    }
+}, { passive: false });
+
+sheetHeader.addEventListener('touchend', (e) => {
+    if (!isDragging) return;
+    isDragging = false;
+
+    const touchY = e.changedTouches[0].clientY;
+    const delta = touchY - startY;
+
+    // 3. Restaurar la transición suave CSS
+    infoSheetPanel.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+
+    // 4. Decidir acción: 
+    // Si se arrastró más de 150px hacia abajo, cerrar. Si no, volver a subir.
+    if (delta > 150) {
+        closeInfoSheet();
+    } else {
+        // Regresar a la posición original (resetear inline style)
+        infoSheetPanel.style.transform = '';
+    }
+});
+
             // --- LÓGICA DE SELECCIÓN DE ROL ---
 
 function openRoleModal() {
@@ -752,11 +806,15 @@ L.marker([area.lat, area.lng], { icon: customIcon }) // <-- ¡AQUÍ ESTÁ EL CAM
 }
 
 function closeInfoSheet() {
+    // 1. Remove the open class
     infoSheet.classList.remove('sheet-open');
-    // Espera a que la animación termine para ocultar el elemento
+    
+    // 2. Wait for animation to finish, then hide and CLEAN UP styles
     setTimeout(() => {
         infoSheet.classList.add('hidden');
-    }, 300); // 300ms es la duración de nuestra transición CSS
+        // IMPORTANT: Reset the inline transform style so the CSS class works next time
+        infoSheetPanel.style.transform = ''; 
+    }, 300); 
 }
 
 
